@@ -1,4 +1,3 @@
-import axios, { AxiosResponse } from 'axios';
 import dotenv from 'dotenv';
 
 
@@ -39,28 +38,56 @@ class RedditAPIWrapper {
 
 
  private async authenticate() {
-   //authentication
+  if (this.token) return;
+
+  const authString = btoa(`${this.clientId}:${this.clientSecret}`);
+  try {
+    const response = await fetch('https://www.reddit.com/api/v1/access_token', {
+      method: 'POST',
+      headers: {
+        Authorization: `Basic ${authString}`,
+        'User-Agent': this.userAgent,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: 'grant_type=client_credentials',
+    });
+
+    if (!response.ok) {
+      throw new Error(`Error authenticating with Reddit: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    this.token = data.access_token;
+  } catch (error) {
+    console.error('Error authenticating with Reddit:', error);
+  }
  }
 
 
  private async makeRequest(endpoint: string, params: Record<string, any> = {}): Promise<any> {
-   await this.authenticate();
+  await this.authenticate();
 
+  const url = new URL(`${this.baseUrl}${endpoint}`);
+  Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
 
-   try {
-     const response = await axios.get(`${this.baseUrl}${endpoint}`, {
-       headers: {
-         Authorization: `Bearer ${this.token}`,
-         'User-Agent': this.userAgent,
-       },
-       params,
-     });
-     return response.data;
-   } catch (error) {
-     console.error(`Error making request to ${endpoint}:`, error);
-     throw error;
-   }
- }
+  try {
+    const response = await fetch(url.toString(), {
+      headers: {
+        Authorization: `Bearer ${this.token}`,
+        'User-Agent': this.userAgent,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Error making request to ${endpoint}: ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error(`Error making request to ${endpoint}:`, error);
+    throw error;
+  }
+}
 
 
  async searchSubreddit(
@@ -77,7 +104,6 @@ class RedditAPIWrapper {
      t: time,
    });
 
-
    return data.data.children.map((item: any) => ({
      title: item.data.title,
      selftext: item.data.selftext,
@@ -92,9 +118,9 @@ class RedditAPIWrapper {
 
  async fetchUserPosts(username: string, limit: number = 10, time: string = 'all'): Promise<RedditPost[]> {
    const data = await this.makeRequest(`/user/${username}/submitted`, {
-     limit,
-     t: time,
-   });
+    limit: limit.toString(),
+    t: time,
+  });
 
 
    return data.data.children.map((item: any) => ({
@@ -108,6 +134,5 @@ class RedditAPIWrapper {
    }));
  }
 }
-
 
 export default RedditAPIWrapper;
