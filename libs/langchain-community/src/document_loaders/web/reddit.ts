@@ -1,59 +1,119 @@
 import { BaseDocumentLoader } from "@langchain/core/document_loaders/base";
-import { RedditAPIWrapper,RedditPost  } from "../../utils/reddit";
 import { Document } from "@langchain/core/documents";
+import { getEnvironmentVariable } from "@langchain/core/utils/env";
+import {
+  RedditAPIWrapper,
+  RedditPost,
+  RedditAPIConfig,
+} from "../../utils/reddit.js";
 
+/**
+ * Class representing a document loader for loading Reddit posts. It extends
+ * the BaseDocumentLoader and implements the RedditAPIConfig interface.
+ * @example
+ * ```typescript
+ * const loader = new RedditPostsLoader({
+ *   clientId: "your-client-id",
+ *   clientSecret: "your-client-secret",
+ *   userAgent: "your-user-agent",
+ *   searchQueries: ["LangChain", "Langchaindev"],
+ *   mode: "subreddit",
+ *   categories: ["hot", "new"],
+ *   numberPosts: 5
+ * });
+ * const docs = await loader.load();
+ * ```
+ */
+export class RedditPostsLoader
+  extends BaseDocumentLoader
+  implements RedditAPIConfig
+{
+  public clientId: string;
 
+  public clientSecret: string;
 
+  public userAgent: string;
 
-class RedditPostsLoader extends BaseDocumentLoader {
-  private apiWrapper: RedditAPIWrapper; //wrapper to fetch or search for posts
-  private searchQueries: string[]; //"subreddits or usernames to load from
-  private mode: string; //Can be "subreddit" or "username"
-  private categories: string[]; //Only "controversial" "hot" "new" "rising" "top"
-  private numberPosts: number; //max number of posts to load from each         
-                                category-search query pair
+  private redditApiWrapper: RedditAPIWrapper;
 
+  private searchQueries: string[];
 
-  constructor(
-    apiWrapper: RedditAPIWrapper,
-    searchQueries: string[],
-    mode: string,
-    categories: string[] = ["new"],
-    numberPosts: number = 10
-  ) {
+  private mode: string;
+
+  private categories: string[];
+
+  private numberPosts: number;
+
+  constructor({
+    clientId = getEnvironmentVariable("REDDIT_CLIENT_ID") as string,
+    clientSecret = getEnvironmentVariable("REDDIT_CLIENT_SECRET") as string,
+    userAgent = getEnvironmentVariable("REDDIT_USER_AGENT") as string,
+    searchQueries,
+    mode,
+    categories = ["new"],
+    numberPosts = 10,
+  }: RedditAPIConfig & {
+    searchQueries: string[];
+    mode: string;
+    categories?: string[];
+    numberPosts?: number;
+  }) {
     super();
-    this.apiWrapper = apiWrapper;
+    this.clientId = clientId;
+    this.clientSecret = clientSecret;
+    this.userAgent = userAgent;
+    this.redditApiWrapper = new RedditAPIWrapper({
+      clientId: this.clientId,
+      clientSecret: this.clientSecret,
+      userAgent: this.userAgent,
+    });
     this.searchQueries = searchQueries;
     this.mode = mode;
     this.categories = categories;
     this.numberPosts = numberPosts;
   }
 
-
-  async load(): Promise<Document[]> {
+  /**
+   * Loads Reddit posts using the Reddit API, creates a Document instance
+   * with the JSON representation of the post as the page content and metadata,
+   * and returns it.
+   * @returns A Promise that resolves to an array of Document instances.
+   */
+  public async load(): Promise<Document[]> {
     let results: Document[] = [];
+    for (const query of this.searchQueries) {
+      for (const category of this.categories) {
+        let posts: RedditPost[] = [];
 
-
-    if (this.mode === "subreddit" || this.mode === "username") {
-      for (const query of this.searchQueries) {
-        for (const category of this.categories) {
-          const posts = use apiWrapper to fetch numberPosts posts from the 
-                        subreddit or username in query with category 
-          results = results.concat(this._mapPostsToDocuments(posts, category));
+        if (this.mode === "subreddit") {
+          posts = await this.redditApiWrapper.searchSubreddit(
+            query,
+            "*",
+            category,
+            this.numberPosts
+          );
+        } else if (this.mode === "username") {
+          posts = await this.redditApiWrapper.fetchUserPosts(
+            query,
+            category,
+            this.numberPosts
+          );
+        } else {
+          throw new Error(
+            "Invalid mode: please choose 'subreddit' or 'username'"
+          );
         }
+        results = results.concat(this._mapPostsToDocuments(posts, category));
       }
-    } else {
-      throw new Error(
-        "Invalid mode: please choose 'subreddit' or 'username'
-      );
     }
-
 
     return results;
   }
 
-
-  private _mapPostsToDocuments(posts: Post[], category: string): Document[] {
+  private _mapPostsToDocuments(
+    posts: RedditPost[],
+    category: string
+  ): Document[] {
     return posts.map(
       (post) =>
         new Document({
@@ -70,3 +130,4 @@ class RedditPostsLoader extends BaseDocumentLoader {
         })
     );
   }
+}
