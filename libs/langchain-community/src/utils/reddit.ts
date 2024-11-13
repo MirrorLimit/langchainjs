@@ -1,5 +1,5 @@
 import dotenv from 'dotenv';
-
+//import { Buffer } from 'buffer';
 
 dotenv.config();
 
@@ -41,6 +41,8 @@ class RedditAPIWrapper {
   if (this.token) return;
 
   const authString = btoa(`${this.clientId}:${this.clientSecret}`);
+  // const authString = Buffer.from(`${this.clientId}:${this.clientSecret}`).toString('base64');
+
   try {
     const response = await fetch('https://www.reddit.com/api/v1/access_token', {
       method: 'POST',
@@ -61,31 +63,58 @@ class RedditAPIWrapper {
   } catch (error) {
     console.error('Error authenticating with Reddit:', error);
   }
- }
+}
 
+ private async waitForRateLimitReset() {
+  const delay = Math.random() * 1000 + 5000; // Adding random delay to avoid bursts
+  console.log(`Waiting for rate limit reset... retrying after ${delay}ms`);
+  await new Promise(resolve => setTimeout(resolve, delay));
+}
 
- private async makeRequest(endpoint: string, params: Record<string, any> = {}): Promise<any> {
+private async makeRequest( 
+  endpoint: string, 
+  params: Record<string, any> = {}, 
+  retries: number = 5,
+  delay: number = 1000): Promise<any> {
   await this.authenticate();
 
   const url = new URL(`${this.baseUrl}${endpoint}`);
   Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
 
-  try {
-    const response = await fetch(url.toString(), {
-      headers: {
-        Authorization: `Bearer ${this.token}`,
-        'User-Agent': this.userAgent,
-      },
-    });
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      const response = await fetch(url.toString(), {
+        headers: {
+          Authorization: `Bearer ${this.token}`,
+          'User-Agent': this.userAgent,
+        },
+      });
 
-    if (!response.ok) {
-      throw new Error(`Error making request to ${endpoint}: ${response.statusText}`);
+      if (!response.ok) {
+        if (response.status === 429) { // Rate Limit Exceeded
+          await this.waitForRateLimitReset(); // Wait before retrying
+          return await this.makeRequest(endpoint, params); // Retry the request
+        }
+        if (response.status >= 500) {  // Server errors
+          console.error(`Server error: ${response.statusText}`);
+          throw new Error(`Error making request to ${endpoint}: ${response.statusText}`);
+        } else {
+          throw new Error(`Error making request to ${endpoint}: ${response.statusText}`);
+        }
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error(`Attempt ${attempt + 1} failed for request to ${endpoint}:`, error);
+
+      // If last attempt, rethrow the error
+      if (attempt === retries - 1) throw error;
+
+      // Apply exponential back-off
+      const jitter = Math.random() * 100; // Avoid bursts
+      const backoffDelay = delay * (2 ** attempt) + jitter;
+      await new Promise(resolve => setTimeout(resolve, backoffDelay));
     }
-
-    return await response.json();
-  } catch (error) {
-    console.error(`Error making request to ${endpoint}:`, error);
-    throw error;
   }
 }
 
