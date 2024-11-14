@@ -4,14 +4,14 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 
-interface RedditAPIConfig {
+export interface RedditAPIConfig {
  clientId: string;
  clientSecret: string;
  userAgent: string;
 }
 
 
-interface RedditPost {
+export interface RedditPost {
  title: string;
  selftext: string;
  subreddit_name_prefixed: string;
@@ -22,7 +22,7 @@ interface RedditPost {
 }
 
 
-class RedditAPIWrapper {
+export class RedditAPIWrapper {
  private clientId: string;
  private clientSecret: string;
  private userAgent: string;
@@ -131,6 +131,7 @@ private async makeRequest(
      sort,
      limit,
      t: time,
+     restrict_sr: "on",
    });
 
    return data.data.children.map((item: any) => ({
@@ -145,8 +146,9 @@ private async makeRequest(
  }
 
 
- async fetchUserPosts(username: string, limit: number = 10, time: string = 'all'): Promise<RedditPost[]> {
+ async fetchUserPosts(username: string, sort: string = 'new', limit: number = 10, time: string = 'all'): Promise<RedditPost[]> {
    const data = await this.makeRequest(`/user/${username}/submitted`, {
+    sort: sort,
     limit: limit.toString(),
     t: time,
   });
@@ -163,5 +165,3 @@ private async makeRequest(
    }));
  }
 }
-
-export default RedditAPIWrapper;
