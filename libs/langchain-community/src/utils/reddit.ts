@@ -1,4 +1,6 @@
 import dotenv from 'dotenv';
+import { AsyncCaller } from "../../../../langchain-core/src/utils/async_caller.ts";
+
 //import { Buffer } from 'buffer';
 
 dotenv.config();
@@ -28,12 +30,21 @@ export class RedditAPIWrapper {
  private userAgent: string;
  private token: string | null = null;
  private baseUrl: string = 'https://oauth.reddit.com';
+ private asyncCaller: AsyncCaller; // Using AsyncCaller for requests
+
 
 
  constructor(config: RedditAPIConfig) {
    this.clientId = config.clientId;
    this.clientSecret = config.clientSecret;
    this.userAgent = config.userAgent;
+   this.asyncCaller = new AsyncCaller({
+    maxConcurrency: 5, // adjust later
+    maxRetries: 6, 
+    onFailedAttempt: (error) => {
+      console.error('Attempt failed:', error.message);
+    },
+  });
  }
 
 
@@ -65,24 +76,14 @@ export class RedditAPIWrapper {
   }
 }
 
- private async waitForRateLimitReset() {
-  const delay = Math.random() * 1000 + 5000; // Adding random delay to avoid bursts
-  console.log(`Waiting for rate limit reset... retrying after ${delay}ms`);
-  await new Promise(resolve => setTimeout(resolve, delay));
-}
 
-private async makeRequest( 
-  endpoint: string, 
-  params: Record<string, any> = {}, 
-  retries: number = 5,
-  delay: number = 1000): Promise<any> {
-  await this.authenticate();
+private async makeRequest(endpoint: string, params: Record<string, any> = {}): Promise<any> {
+    await this.authenticate();
 
-  const url = new URL(`${this.baseUrl}${endpoint}`);
-  Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
+    const url = new URL(`${this.baseUrl}${endpoint}`);
+    Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
 
-  for (let attempt = 0; attempt < retries; attempt++) {
-    try {
+    return this.asyncCaller.call(async () => {
       const response = await fetch(url.toString(), {
         headers: {
           Authorization: `Bearer ${this.token}`,
@@ -91,32 +92,16 @@ private async makeRequest(
       });
 
       if (!response.ok) {
-        if (response.status === 429) { // Rate Limit Exceeded
-          await this.waitForRateLimitReset(); // Wait before retrying
-          return await this.makeRequest(endpoint, params); // Retry the request
+        if (response.status === 429) {
+          console.warn('Rate limit exceeded, retrying...');
+          throw new Error('Rate limit exceeded');
         }
-        if (response.status >= 500) {  // Server errors
-          console.error(`Server error: ${response.statusText}`);
-          throw new Error(`Error making request to ${endpoint}: ${response.statusText}`);
-        } else {
-          throw new Error(`Error making request to ${endpoint}: ${response.statusText}`);
-        }
+        throw new Error(`Error making request to ${endpoint}: ${response.statusText}`);
       }
 
       return await response.json();
-    } catch (error) {
-      console.error(`Attempt ${attempt + 1} failed for request to ${endpoint}:`, error);
-
-      // If last attempt, rethrow the error
-      if (attempt === retries - 1) throw error;
-
-      // Apply exponential back-off
-      const jitter = Math.random() * 100; // Avoid bursts
-      const backoffDelay = delay * (2 ** attempt) + jitter;
-      await new Promise(resolve => setTimeout(resolve, backoffDelay));
-    }
+    });
   }
-}
 
 
  async searchSubreddit(
