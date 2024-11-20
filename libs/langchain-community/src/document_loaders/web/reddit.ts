@@ -13,9 +13,9 @@ import {
  * @example
  * ```typescript
  * const loader = new RedditPostsLoader({
- *   clientId: "your-client-id",
- *   clientSecret: "your-client-secret",
- *   userAgent: "your-user-agent",
+ *   clientId: "REDDIT_CLIENT_ID",
+ *   clientSecret: "REDDIT_CLIENT_SECRET",
+ *   userAgent: "REDDIT_USER_AGENT",
  *   searchQueries: ["LangChain", "Langchaindev"],
  *   mode: "subreddit",
  *   categories: ["hot", "new"],
