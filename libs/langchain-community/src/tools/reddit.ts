@@ -1,9 +1,7 @@
 // Imports for API wrapper; may need to change if location is incorrect
-import {RedditAPIWrapper} from "@langchain/community/utils/reddit.ts"
+import { RedditAPIWrapper } from "@langchain/community/utils/reddit.ts";
 
-
-import {Tool} from "@langchain/core/tools";
-
+import { Tool } from "@langchain/core/tools";
 
 /*  Interface for the search parameters.
  *  sortMethod: The sorting method for the search results, can be one of "relevance", "hot", "top", "new", "comments"
@@ -24,18 +22,14 @@ export interface RedditSearchRunParams {
   userAgent?: string;
 }
 
-
 export class RedditSearchRun extends Tool {
   static lc_name() {
     return "RedditSearchRun";
   }
 
-
   name = "Reddit_search";
 
-
   description = "A tool for searching reddit posts using the reddit API";
-
 
   // Default values for the search parameters
   protected sortMethod = "relevance";
@@ -46,15 +40,13 @@ export class RedditSearchRun extends Tool {
   protected clientSecret = "";
   protected userAgent = "";
 
-
   /**
    * Constructor for the RedditSearchRun class
    * @description Initializes the search parameters if given
    * @param params The search parameters
-  */
+   */
   constructor(params: RedditSearchRunParams = {}) {
     super();
-
 
     this.sortMethod = params.sortMethod ?? this.sortMethod;
     this.time = params.time ?? this.time;
@@ -65,7 +57,6 @@ export class RedditSearchRun extends Tool {
     this.userAgent = params.userAgent ?? this.userAgent;
   }
 
-
   /**
    * @param {string} query The search query to be sent to reddit
    * @description Function to retrieve posts based on a search query
@@ -75,11 +66,17 @@ export class RedditSearchRun extends Tool {
     const apiWrapper = new RedditAPIWrapper({
       clientId: this.clientId,
       clientSecret: this.clientSecret,
-      userAgent: this.userAgent});
-   
-    return apiWrapper.searchSubreddit(this.subreddit, query, this.sortMethod, this.limit, this.time);
-  }
+      userAgent: this.userAgent,
+    });
 
+    return apiWrapper.searchSubreddit(
+      this.subreddit,
+      query,
+      this.sortMethod,
+      this.limit,
+      this.time
+    );
+  }
 
   /**
    * @param {string} username The username whose posts are to be retrieved
@@ -88,12 +85,16 @@ export class RedditSearchRun extends Tool {
    * @description Function to retrieve posts from a certain user
    * @returns The latest limit number of posts from the user
    */
-  async _fetchUserPosts(username: string, limit: number = this.limit, time: string = this.time): Promise<any> {
+  async _fetchUserPosts(
+    username: string,
+    limit: number = this.limit,
+    time: string = this.time
+  ): Promise<any> {
     const apiWrapper = new RedditAPIWrapper({
       clientId: this.clientId,
       clientSecret: this.clientSecret,
-      userAgent: this.userAgent});
-
+      userAgent: this.userAgent,
+    });
 
     return apiWrapper.fetchUserPosts(username, limit, time);
   }
