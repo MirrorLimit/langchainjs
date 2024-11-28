@@ -1,167 +1,180 @@
-// import { describe, expect, it, jest } from "@jest/globals";
-// import { RedditAPIWrapper, RedditAPIConfig, RedditPost } from "../reddit.js"; // Adjust path as needed
-// import { AsyncCaller } from "@langchain/core/utils/async_caller";
+import { describe, expect, it, jest, beforeEach, afterEach } from "@jest/globals";
+import { RedditAPIWrapper, RedditAPIConfig } from "../reddit.js";
 
-// // Mocking global fetch for HTTP requests
-// global.fetch = jest.fn();
+// Mocking global fetch for HTTP requests
+global.fetch = jest.fn() as jest.MockedFunction<typeof fetch>;
 
-// // Sample RedditAPIConfig for tests
-// const fakeConfig: RedditAPIConfig = {
-//   clientId: "fakeClientId",
-//   clientSecret: "fakeClientSecret",
-//   userAgent: "test-user-agent",
-// };
+// Sample RedditAPIConfig for tests
+const fakeConfig: RedditAPIConfig = {
+  clientId: "fakeClientId",
+  clientSecret: "fakeClientSecret",
+  userAgent: "test-user-agent",
+};
 
-// describe("RedditAPIWrapper", () => {
-//   let redditAPIWrapper: RedditAPIWrapper;
+describe("RedditAPIWrapper", () => {
+  let redditAPIWrapper: RedditAPIWrapper;
 
-//   beforeEach(() => {
-//     redditAPIWrapper = new RedditAPIWrapper(fakeConfig);
-//   });
+  beforeEach(() => {
+    redditAPIWrapper = new RedditAPIWrapper(fakeConfig);
+  });
 
-//   afterEach(() => {
-//     jest.clearAllMocks();
-//   });
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
 
-//   it("should authenticate successfully and set token", async () => {
-//     const fakeAccessToken = "fakeAccessToken";
-//     const fakeResponse = {
-//       ok: true,
-//       json: jest.fn().mockResolvedValue({ access_token: fakeAccessToken }),
-//     };
-//     (global.fetch as jest.Mock).mockResolvedValue(fakeResponse);
+  it("should authenticate successfully and set token", async () => {
+    const fakeAccessToken = "fakeAccessToken";
+    const fakeResponse = {
+      ok: true,
+      json: jest.fn().mockResolvedValue({ access_token: fakeAccessToken }),
+    } as unknown as Response;
 
-//     await redditAPIWrapper["authenticate"](); // Directly calling private method for testing
+    // Mock fetch to return the fake response for authentication
+    (global.fetch as jest.Mock).mockResolvedValue(fakeResponse);
 
-//     expect(global.fetch).toHaveBeenCalledWith(
-//       "https://www.reddit.com/api/v1/access_token",
-//       expect.objectContaining({
-//         method: "POST",
-//         headers: expect.objectContaining({
-//           Authorization: expect.stringContaining("Basic"), // Checks if Basic auth is used
-//         }),
-//       })
-//     );
-//     expect(redditAPIWrapper["token"]).toBe(fakeAccessToken); // Ensure token is set
-//   });
+    await redditAPIWrapper["authenticate"](); // Directly calling private method for testing
 
-//   it("should make a request successfully", async () => {
-//     const fakeToken = "fakeAccessToken";
-//     redditAPIWrapper["token"] = fakeToken;
-//     const fakeJsonResponse = { data: { children: [] } };
-//     const fakeResponse = {
-//       ok: true,
-//       json: jest.fn().mockResolvedValue(fakeJsonResponse),
-//     };
-//     (global.fetch as jest.Mock).mockResolvedValue(fakeResponse);
+    // Validate that the fetch was called correctly with the correct headers and URL
+    expect(global.fetch).toHaveBeenCalledWith(
+      "https://www.reddit.com/api/v1/access_token",
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({
+          Authorization: expect.stringContaining("Basic"), // Checks if Basic auth is used
+        }),
+      })
+    );
+    expect(redditAPIWrapper["token"]).toBe(fakeAccessToken); // Ensure token is set
+  });
 
-//     const response = await redditAPIWrapper["makeRequest"]("/r/test/search", {
-//       q: "test",
-//     });
+  it("should make a request successfully", async () => {
+    const fakeToken = "fakeAccessToken";
+    redditAPIWrapper["token"] = fakeToken;
 
-//     expect(global.fetch).toHaveBeenCalledWith(
-//       "https://oauth.reddit.com/r/test/search?q=test",
-//       expect.objectContaining({
-//         headers: expect.objectContaining({
-//           Authorization: `Bearer ${fakeToken}`,
-//         }),
-//       })
-//     );
-//     expect(response).toEqual(fakeJsonResponse);
-//   });
+    const fakeJsonResponse = { data: { children: [] } };
+    const fakeResponse = {
+      ok: true,
+      json: jest.fn().mockResolvedValue(fakeJsonResponse),
+    } as unknown as Response;
 
-//   it("should handle rate limit errors gracefully", async () => {
-//     const fakeResponse = {
-//       ok: false,
-//       status: 429, // Rate limit exceeded
-//       statusText: "Too Many Requests",
-//     };
-//     (global.fetch as jest.Mock).mockResolvedValue(fakeResponse);
+    // Mock fetch to return the fake response for making requests
+    (global.fetch as jest.Mock).mockResolvedValue(fakeResponse);
 
-//     try {
-//       await redditAPIWrapper["makeRequest"]("/r/test/search", { q: "test" });
-//     } catch (error) {
-//       expect(error.message).toBe("Rate limit exceeded");
-//     }
-//   });
+    const response = await redditAPIWrapper["makeRequest"]("/r/test/search", {
+      q: "test",
+    });
 
-//   it("should search subreddit and map data correctly", async () => {
-//     const fakeJsonResponse = {
-//       data: {
-//         children: [
-//           {
-//             data: {
-//               title: "Test Post",
-//               selftext: "Test Text",
-//               subreddit_name_prefixed: "r/test",
-//               score: 100,
-//               id: "123",
-//               url: "https://test.com",
-//               author: "test_author",
-//             },
-//           },
-//         ],
-//       },
-//     };
+    // Validate that the fetch was called with the correct URL and authorization header
+    expect(global.fetch).toHaveBeenCalledWith(
+      "https://oauth.reddit.com/r/test/search?q=test",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: `Bearer ${fakeToken}`,
+        }),
+      })
+    );
+    expect(response).toEqual(fakeJsonResponse);
+  });
 
-//     const fakeResponse = {
-//       ok: true,
-//       json: jest.fn().mockResolvedValue(fakeJsonResponse),
-//     };
+  it("should handle rate limit errors gracefully", async () => {
+    const fakeResponse = {
+      ok: false,
+      status: 429, // Rate limit exceeded
+      statusText: "Too Many Requests",
+    } as unknown as Response;
 
-//     (global.fetch as jest.Mock).mockResolvedValue(fakeResponse);
+    // Mock fetch to return a rate-limited response
+    (global.fetch as jest.Mock).mockResolvedValue(fakeResponse);
 
-//     const posts = await redditAPIWrapper.searchSubreddit("test", "test query");
+    // Expect the method to throw an error when rate-limited
+    await expect(
+      redditAPIWrapper["makeRequest"]("/r/test/search", { q: "test" })
+    ).rejects.toThrow("Rate limit exceeded");
+  });
 
-//     expect(posts).toHaveLength(1);
-//     expect(posts[0]).toEqual({
-//       title: "Test Post",
-//       selftext: "Test Text",
-//       subreddit_name_prefixed: "r/test",
-//       score: 100,
-//       id: "123",
-//       url: "https://test.com",
-//       author: "test_author",
-//     });
-//   });
+  it("should search subreddit and map data correctly", async () => {
+    const fakeJsonResponse = {
+      data: {
+        children: [
+          {
+            data: {
+              title: "Test Post",
+              selftext: "Test Text",
+              subreddit_name_prefixed: "r/test",
+              score: 100,
+              id: "123",
+              url: "https://test.com",
+              author: "test_author",
+            },
+          },
+        ],
+      },
+    };
 
-//   it("should fetch user posts and map data correctly", async () => {
-//     const fakeJsonResponse = {
-//       data: {
-//         children: [
-//           {
-//             data: {
-//               title: "User Post",
-//               selftext: "User Post Text",
-//               subreddit_name_prefixed: "r/test",
-//               score: 50,
-//               id: "456",
-//               url: "https://test.com",
-//               author: "user_test",
-//             },
-//           },
-//         ],
-//       },
-//     };
+    const fakeResponse = {
+      ok: true,
+      json: jest.fn().mockResolvedValue(fakeJsonResponse),
+    } as unknown as Response;
 
-//     const fakeResponse = {
-//       ok: true,
-//       json: jest.fn().mockResolvedValue(fakeJsonResponse),
-//     };
+    // Mock fetch to return the fake response for subreddit search
+    (global.fetch as jest.Mock).mockResolvedValue(fakeResponse);
 
-//     (global.fetch as jest.Mock).mockResolvedValue(fakeResponse);
+    // Call the method that searches subreddit
+    const posts = await redditAPIWrapper.searchSubreddit("test", "test query");
 
-//     const posts = await redditAPIWrapper.fetchUserPosts("testuser", "new");
+    // Validate the response format and data mapping
+    expect(posts).toHaveLength(1);
+    expect(posts[0]).toEqual({
+      title: "Test Post",
+      selftext: "Test Text",
+      subreddit_name_prefixed: "r/test",
+      score: 100,
+      id: "123",
+      url: "https://test.com",
+      author: "test_author",
+    });
+  });
 
-//     expect(posts).toHaveLength(1);
-//     expect(posts[0]).toEqual({
-//       title: "User Post",
-//       selftext: "User Post Text",
-//       subreddit_name_prefixed: "r/test",
-//       score: 50,
-//       id: "456",
-//       url: "https://test.com",
-//       author: "user_test",
-//     });
-//   });
-// });
+  it("should fetch user posts and map data correctly", async () => {
+    const fakeJsonResponse = {
+      data: {
+        children: [
+          {
+            data: {
+              title: "User Post",
+              selftext: "User Post Text",
+              subreddit_name_prefixed: "r/test",
+              score: 50,
+              id: "456",
+              url: "https://test.com",
+              author: "user_test",
+            },
+          },
+        ],
+      },
+    };
+
+    const fakeResponse = {
+      ok: true,
+      json: jest.fn().mockResolvedValue(fakeJsonResponse),
+    } as unknown as Response;
+
+    // Mock fetch to return the fake response for fetching user posts
+    (global.fetch as jest.Mock).mockResolvedValue(fakeResponse);
+
+    // Call the method that fetches user posts
+    const posts = await redditAPIWrapper.fetchUserPosts("testuser", "new");
+
+    // Validate the response format and data mapping
+    expect(posts).toHaveLength(1);
+    expect(posts[0]).toEqual({
+      title: "User Post",
+      selftext: "User Post Text",
+      subreddit_name_prefixed: "r/test",
+      score: 50,
+      id: "456",
+      url: "https://test.com",
+      author: "user_test",
+    });
+  });
+});
