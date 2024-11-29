@@ -1,6 +1,7 @@
-// Imports for API wrapper; may need to change if location is incorrect
-import { RedditAPIWrapper } from "@langchain/community/utils/reddit.ts";
+import { getEnvironmentVariable } from "@langchain/core/utils/env" //"../../../../langchain-core/src/utils/env.js";
 
+// Imports for API wrapper; may need to change if location is incorrect
+import { RedditAPIWrapper } from "../utils/reddit.js";
 import { Tool } from "@langchain/core/tools";
 
 /*  Interface for the search parameters.
@@ -52,9 +53,9 @@ export class RedditSearchRun extends Tool {
     this.time = params.time ?? this.time;
     this.subreddit = params.subreddit ?? this.subreddit;
     this.limit = params.limit ?? this.limit;
-    this.clientId = params.clientId ?? this.clientId;
-    this.clientSecret = params.clientSecret ?? this.clientSecret;
-    this.userAgent = params.userAgent ?? this.userAgent;
+    this.clientId = getEnvironmentVariable("REDDIT_CLIENT_ID") as string;
+    this.clientSecret = getEnvironmentVariable("REDDIT_CLIENT_SECRET") as string;
+    this.userAgent = getEnvironmentVariable("REDDIT_USER_AGENT") as string;
   }
 
   /**
@@ -85,7 +86,7 @@ export class RedditSearchRun extends Tool {
    * @description Function to retrieve posts from a certain user
    * @returns The latest limit number of posts from the user
    */
-  async _fetchUserPosts(
+  async fetchUserPosts(
     username: string,
     limit: number = this.limit,
     time: string = this.time
