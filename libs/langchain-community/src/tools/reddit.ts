@@ -1,6 +1,4 @@
-import { getEnvironmentVariable } from "@langchain/core/utils/env" //"../../../../langchain-core/src/utils/env.js";
-
-// Imports for API wrapper; may need to change if location is incorrect
+import { getEnvironmentVariable } from "@langchain/core/utils/env"; //"../../../../langchain-core/src/utils/env.js";
 import { RedditAPIWrapper } from "../utils/reddit.js";
 import { Tool } from "@langchain/core/tools";
 
@@ -23,6 +21,23 @@ export interface RedditSearchRunParams {
   userAgent?: string;
 }
 
+
+/**
+ * Class representing a tool for searching reddit posts using the reddit API.
+ * It extends the Tool class.
+ * 
+ * @example
+ * ```typescript
+ * const search = new RedditSearchRun({
+ *  sortMethod: "relevance",
+ *  time: "all",
+ *  subreddit: "dankmemes",
+ *  limit: 1,
+ * });
+ * 
+ * const post = await search.invoke("College");
+ * ```
+ */
 export class RedditSearchRun extends Tool {
   static lc_name() {
     return "RedditSearchRun";
@@ -53,9 +68,9 @@ export class RedditSearchRun extends Tool {
     this.time = params.time ?? this.time;
     this.subreddit = params.subreddit ?? this.subreddit;
     this.limit = params.limit ?? this.limit;
-    this.clientId = getEnvironmentVariable("REDDIT_CLIENT_ID") as string;
-    this.clientSecret = getEnvironmentVariable("REDDIT_CLIENT_SECRET") as string;
-    this.userAgent = getEnvironmentVariable("REDDIT_USER_AGENT") as string;
+    this.clientId = params.clientId ?? getEnvironmentVariable("REDDIT_CLIENT_ID") as string;
+    this.clientSecret = params.clientSecret ?? getEnvironmentVariable("REDDIT_CLIENT_SECRET") as string;
+    this.userAgent = params.userAgent ?? getEnvironmentVariable("REDDIT_USER_AGENT") as string;
   }
 
   /**
