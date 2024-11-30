@@ -1,7 +1,7 @@
 import { test, expect } from "@jest/globals";
 //import { Document } from "@langchain/core/documents";
 //import { RedditPostsLoader } from "../web/reddit.js";
-import { RedditSearchRun } from "../reddit.js"
+import { RedditSearchRun } from "../reddit.js";
 
 test("Test fetching a post based on a query", async () => {
   const search = new RedditSearchRun({

@@ -1,4 +1,11 @@
-import { describe, expect, it, jest, beforeEach, afterEach } from "@jest/globals";
+import {
+  describe,
+  expect,
+  it,
+  jest,
+  beforeEach,
+  afterEach,
+} from "@jest/globals";
 import { RedditAPIWrapper, RedditAPIConfig } from "../reddit.js";
 
 // Mocking global fetch for HTTP requests

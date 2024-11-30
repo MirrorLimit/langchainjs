@@ -1,8 +1,6 @@
 import dotenv from "dotenv";
 import { AsyncCaller } from "@langchain/core/utils/async_caller";
 
-//import { Buffer } from 'buffer';
-
 dotenv.config();
 
 export interface RedditAPIConfig {
@@ -34,7 +32,7 @@ export class RedditAPIWrapper {
     this.clientSecret = config.clientSecret;
     this.userAgent = config.userAgent;
     this.asyncCaller = new AsyncCaller({
-      maxConcurrency: 5, // adjust later
+      maxConcurrency: 5, 
       maxRetries: 6,
       onFailedAttempt: (error) => {
         console.error("Attempt failed:", error.message);
@@ -46,7 +44,6 @@ export class RedditAPIWrapper {
     if (this.token) return;
 
     const authString = btoa(`${this.clientId}:${this.clientSecret}`);
-    // const authString = Buffer.from(`${this.clientId}:${this.clientSecret}`).toString('base64');
 
     try {
       const response = await fetch(
