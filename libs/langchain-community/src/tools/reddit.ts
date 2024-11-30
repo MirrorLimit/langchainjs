@@ -96,6 +96,7 @@ export class RedditSearchRun extends Tool {
 
   /**
    * @param {string} username The username whose posts are to be retrieved
+   * @param {string} sortMethod The sorting method for the posts to be retrieved
    * @param {number} limit The number of posts to retrieve starting from the latest post
    * @param {string} time The time period for the posts to be retrieved
    * @description Function to retrieve posts from a certain user
@@ -103,6 +104,7 @@ export class RedditSearchRun extends Tool {
    */
   async fetchUserPosts(
     username: string,
+    sortMethod: string = this.sortMethod,
     limit: number = this.limit,
     time: string = this.time
   ): Promise<any> {
@@ -112,6 +114,6 @@ export class RedditSearchRun extends Tool {
       userAgent: this.userAgent,
     });
 
-    return apiWrapper.fetchUserPosts(username, limit, time);
+    return apiWrapper.fetchUserPosts(username, sortMethod, limit, time);
   }
 }
