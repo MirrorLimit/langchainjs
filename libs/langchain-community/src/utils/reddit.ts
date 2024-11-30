@@ -21,10 +21,15 @@ export interface RedditPost {
 
 export class RedditAPIWrapper {
   private clientId: string;
+
   private clientSecret: string;
+
   private userAgent: string;
+
   private token: string | null = null;
-  private baseUrl: string = "https://oauth.reddit.com";
+
+  private baseUrl = "https://oauth.reddit.com";
+
   private asyncCaller: AsyncCaller; // Using AsyncCaller for requests
 
   constructor(config: RedditAPIConfig) {
@@ -32,8 +37,8 @@ export class RedditAPIWrapper {
     this.clientSecret = config.clientSecret;
     this.userAgent = config.userAgent;
     this.asyncCaller = new AsyncCaller({
-      maxConcurrency: 5, 
-      maxRetries: 6,
+      maxConcurrency: 5,
+      maxRetries: 3,
       onFailedAttempt: (error) => {
         console.error("Attempt failed:", error.message);
       },
@@ -108,9 +113,9 @@ export class RedditAPIWrapper {
   async searchSubreddit(
     subreddit: string,
     query: string,
-    sort: string = "new",
-    limit: number = 10,
-    time: string = "all"
+    sort: "new",
+    limit: 10,
+    time: "all"
   ): Promise<RedditPost[]> {
     const data = await this.makeRequest(`/r/${subreddit}/search`, {
       q: query,
@@ -120,22 +125,14 @@ export class RedditAPIWrapper {
       restrict_sr: "on",
     });
 
-    return data.data.children.map((item: any) => ({
-      title: item.data.title,
-      selftext: item.data.selftext,
-      subreddit_name_prefixed: item.data.subreddit_name_prefixed,
-      score: item.data.score,
-      id: item.data.id,
-      url: item.data.url,
-      author: item.data.author,
-    }));
+    return data.data.children.map((item: { data: any; }) => item.data);
   }
 
   async fetchUserPosts(
     username: string,
-    sort: string = "new",
-    limit: number = 10,
-    time: string = "all"
+    sort = "new",
+    limit = 10,
+    time = "all"
   ): Promise<RedditPost[]> {
     const data = await this.makeRequest(`/user/${username}/submitted`, {
       sort: sort,
@@ -143,14 +140,6 @@ export class RedditAPIWrapper {
       t: time,
     });
 
-    return data.data.children.map((item: any) => ({
-      title: item.data.title,
-      selftext: item.data.selftext,
-      subreddit_name_prefixed: item.data.subreddit_name_prefixed,
-      score: item.data.score,
-      id: item.data.id,
-      url: item.data.url,
-      author: item.data.author,
-    }));
+    return data.data.children.map((item: { data: any; }) => item.data);
   }
 }

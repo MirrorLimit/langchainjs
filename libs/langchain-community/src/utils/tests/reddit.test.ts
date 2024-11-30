@@ -39,7 +39,7 @@ describe("RedditAPIWrapper", () => {
     // Mock fetch to return the fake response for authentication
     (global.fetch as jest.Mock).mockResolvedValue(fakeResponse);
 
-    await redditAPIWrapper["authenticate"](); // Directly calling private method for testing
+    await redditAPIWrapper["authenticate"](); 
 
     // Validate that the fetch was called correctly with the correct headers and URL
     expect(global.fetch).toHaveBeenCalledWith(
@@ -51,7 +51,7 @@ describe("RedditAPIWrapper", () => {
         }),
       })
     );
-    expect(redditAPIWrapper["token"]).toBe(fakeAccessToken); // Ensure token is set
+    expect(redditAPIWrapper["token"]).toBe(fakeAccessToken); 
   });
 
   it("should make a request successfully", async () => {
@@ -126,7 +126,6 @@ describe("RedditAPIWrapper", () => {
     // Mock fetch to return the fake response for subreddit search
     (global.fetch as jest.Mock).mockResolvedValue(fakeResponse);
 
-    // Call the method that searches subreddit
     const posts = await redditAPIWrapper.searchSubreddit("test", "test query");
 
     // Validate the response format and data mapping
@@ -169,7 +168,6 @@ describe("RedditAPIWrapper", () => {
     // Mock fetch to return the fake response for fetching user posts
     (global.fetch as jest.Mock).mockResolvedValue(fakeResponse);
 
-    // Call the method that fetches user posts
     const posts = await redditAPIWrapper.fetchUserPosts("testuser", "new");
 
     // Validate the response format and data mapping
